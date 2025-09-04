@@ -125,18 +125,18 @@ render() {
   <h3>Today Button</h3>
   <ha-formfield label="Show Today Button">
     <ha-switch
-      .checked=${this._config.show_today_button ?? true}
-      .configValue=${"show_today_button"}
+      .checked=${this._config.today_button?.show ?? true}
+      .configValue=${"today_button.show"}
       @change=${this._valueChanged}
     ></ha-switch>
   </ha-formfield>
 
-${this._config.show_today_button !== false ? html`
+${this._config.today_button?.show !== false ? html`
   <div class="sub-option">
     <ha-select
       label="Today Button Type"
-      .value=${this._config.today_button_type ?? "icon"}
-      .configValue=${"today_button_type"}
+      .value=${this._config.today_button?.type ?? "icon"}
+      .configValue=${"today_button.type"}
       @selected=${this._valueChanged}
       @closed=${(ev) => ev.stopPropagation()}
     >
@@ -144,18 +144,18 @@ ${this._config.show_today_button !== false ? html`
       <ha-list-item value="icon">Icon</ha-list-item>
     </ha-select>
 
-    ${this._config.today_button_type === "icon" ? html`
+    ${this._config.today_button?.type === "icon" ? html`
       <ha-icon-picker
         label="Today Button Icon"
-        .value=${this._config.today_button_icon || "mdi:calendar-today"}
-        .configValue=${"today_button_icon"}
+        .value=${this._config.today_button?.icon || "mdi:calendar-today"}
+        .configValue=${"today_button.icon"}
         @value-changed=${this._valueChanged}
       ></ha-icon-picker>
     ` : html`
       <ha-textfield
         label="Today Button Text"
-        .value=${this._config.today_button_text || "Today"}
-        .configValue=${"today_button_text"}
+        .value=${this._config.today_button?.text || "Today"}
+        .configValue=${"today_button.text"}
         @input=${this._valueChanged}
       ></ha-textfield>
     `}
@@ -165,18 +165,18 @@ ${this._config.show_today_button !== false ? html`
       <h3>Compare Button</h3>
       <ha-formfield label="Show Compare Button">
         <ha-switch
-          .checked=${this._config.show_compare_button ?? false}
-          .configValue=${"show_compare_button"}
+          .checked=${this._config.compare_button?.show ?? false}
+          .configValue=${"compare_button.show"}
           @change=${this._valueChanged}
         ></ha-switch>
       </ha-formfield>
 
-${this._config.show_compare_button === true ? html`
+${this._config.compare_button?.show === true ? html`
   <div class="sub-option">
     <ha-select
       label="Compare Button Type"
-      .value=${this._config.compare_button_type || "text"}
-      .configValue=${"compare_button_type"}
+      .value=${this._config.compare_button?.type || "text"}
+      .configValue=${"compare_button.type"}
       @selected=${this._valueChanged}
       @closed=${(ev) => ev.stopPropagation()}
     >
@@ -184,18 +184,18 @@ ${this._config.show_compare_button === true ? html`
       <ha-list-item value="icon">Icon</ha-list-item>
     </ha-select>
 
-    ${this._config.compare_button_type === "icon" ? html`
+    ${this._config.compare_button?.type === "icon" ? html`
       <ha-icon-picker
         label="Compare Button Icon"
-        .value=${this._config.compare_button_icon || "mdi:compare"}
-        .configValue=${"compare_button_icon"}
+        .value=${this._config.compare_button?.icon || "mdi:compare"}
+        .configValue=${"compare_button.icon"}
         @value-changed=${this._valueChanged}
       ></ha-icon-picker>
     ` : html`
       <ha-textfield
         label="Compare Button Text"
-        .value=${this._config.compare_button_text || "Compare"}
-        .configValue=${"compare_button_text"}
+        .value=${this._config.compare_button?.text || "Compare"}
+        .configValue=${"compare_button.text"}
         @input=${this._valueChanged}
       ></ha-textfield>
     `}
@@ -288,48 +288,35 @@ _valueChanged(ev) {
   if (!this._config || !this.hass) return;
 
   const target = ev.target;
+  const configPath = target.configValue;
+  if (!configPath) return;
+
   let value;
-  let configValue = target.configValue;
-
   if (target.tagName === 'HA-SELECT') {
-    // For ha-select, use the selected value from the event
-    configValue = target.configValue;
-    value = ev.target.value;
-
-    // Update the config immediately for selects
-    const newConfig = {
-      ...this._config,
-      [configValue]: value
-    };
-
-    // Force an update
-    this._config = newConfig;
-    this.requestUpdate();
-
-    // Dispatch the config changed event
-    this.dispatchEvent(new CustomEvent("config-changed", {
-      detail: { config: newConfig },
-      bubbles: true,
-      composed: true
-    }));
-
-    return; // Return early for select elements
-  }
-
-  // Handle other input types
-  if (target.type === 'checkbox' || target.tagName === 'HA-SWITCH') {
+    value = target.value;
+  } else if (target.type === 'checkbox' || target.tagName === 'HA-SWITCH') {
     value = target.checked;
   } else {
     value = target.value;
   }
 
-  if (!configValue) return;
+  // Deep clone the config to avoid mutation
+  const newConfig = structuredClone(this._config);
 
-  // Create new config and dispatch event
-  const newConfig = {
-    ...this._config,
-    [configValue]: value
-  };
+  // Apply the value to the nested path
+  const keys = configPath.split('.');
+  let ref = newConfig;
+  for (let i = 0; i < keys.length - 1; i++) {
+    if (typeof ref[keys[i]] !== 'object' || ref[keys[i]] === null) {
+      ref[keys[i]] = {};
+    }
+    ref = ref[keys[i]];
+  }
+  ref[keys[keys.length - 1]] = value;
+
+  // Update and dispatch
+  this._config = newConfig;
+  this.requestUpdate();
 
   this.dispatchEvent(new CustomEvent("config-changed", {
     detail: { config: newConfig },
@@ -337,6 +324,8 @@ _valueChanged(ev) {
     composed: true
   }));
 }
+
+
 }
 
 // Register the editor
@@ -369,14 +358,18 @@ static getStubConfig() {
   return {
     type: 'custom:extended-energy-date-selector',
     card_theme: true,
-    show_today_button: true,
-    today_button_type: 'icon',
-    today_button_text: 'Today',
-    today_button_icon: 'mdi:calendar-today',
-    show_compare_button: true,
-    compare_button_type: 'text',
-    compare_button_text: 'Compare',
-    compare_button_icon: 'mdi:compare',
+    today_button: {
+      show: true,
+      type: 'icon',
+      text: 'Today',
+      icon: 'mdi:calendar-today'
+    },
+    compare_button: {
+      show: true,
+      type: 'icon',
+      text: 'Compare',
+      icon: 'mdi:compare'
+    },
     prev_next_buttons: true,
     period_buttons: ['day', 'week', 'month', 'year'],
     start_date_helper: 'input_datetime.energy_start_date',
@@ -393,14 +386,18 @@ setConfig(config) {
   this._config = {
     card_theme: config.card_theme !== false,
     title: config.title || '',
-    show_today_button: config.show_today_button !== false,
-    today_button_type: config.today_button_type ?? 'icon',
-    today_button_text: config.today_button_text || 'Today',
-    today_button_icon: config.today_button_icon || 'mdi:calendar-today',
-    show_compare_button: config.show_compare_button === true,
-    compare_button_type: config.compare_button_type || 'text',
-    compare_button_text: config.compare_button_text || 'Compare',
-    compare_button_icon: config.compare_button_icon || 'mdi:compare',
+    today_button: {
+      show: config.today_button?.show !== false,
+      type: config.today_button?.type ?? 'icon',
+      text: config.today_button?.text || 'Today',
+      icon: config.today_button?.icon || 'mdi:calendar-today'
+    },
+    compare_button: {
+      show: config.compare_button?.show === true,
+      type: config.compare_button?.type ?? 'text',
+      text: config.compare_button?.text || 'Compare',
+      icon: config.compare_button?.icon || 'mdi:compare'
+    },
     prev_next_buttons: config.prev_next_buttons !== false,
     period_buttons: config.period_buttons || ['day', 'week', 'month', 'year'],
     custom_period_label: config.custom_period_label,
@@ -659,18 +656,18 @@ setConfig(config) {
             <div class="date-range" id="dateRange">Loading...</div>
             
             <div class="action-buttons">
-            ${this._config.show_today_button ? `
+            ${this._config.today_button?.show ? `
                 <button class="today-button" id="todayButton">
-                ${this._config.today_button_type === 'icon' ? `
-                    <ha-icon icon="${this._config.today_button_icon}"></ha-icon>
-                ` : (this._config.today_button_text || 'Today')}
+                ${this._config.today_button?.type === 'icon' ? `
+                    <ha-icon icon="${this._config.today_button?.icon}"></ha-icon>
+                ` : (this._config.today_button?.text || 'Today')}
                 </button>
             ` : ''}
-            ${this._config.show_compare_button ? `
+            ${this._config.compare_button?.show ? `
                 <button class="compare-button" id="compareButton">
-                ${this._config.compare_button_type === 'icon' ? `
-                    <ha-icon icon="${this._config.compare_button_icon}"></ha-icon>
-                ` : (this._config.compare_button_text || 'Compare')}
+                ${this._config.compare_button?.type === 'icon' ? `
+                    <ha-icon icon="${this._config.compare_button?.icon}"></ha-icon>
+                ` : (this._config.compare_button?.text || 'Compare')}
                 </button>
             ` : ''}
             </div>
