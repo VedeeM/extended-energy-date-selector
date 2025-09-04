@@ -86,14 +86,16 @@ i.e. `today_button_text` is not used when `today_button_type` is set to `icon`
       - month
       - year
       - custom
-    show_today_button: true
-    today_button_type: icon
-    today_button_icon: mdi:calendar-today-outline
-    today_button_text: Now
-    show_compare_button: true
-    compare_button_type: text
-    compare_button_icon: mdi:compare-horizontal
-    compare_button_text: Compare
+    today_button:
+      show: true
+      type: icon
+      icon: mdi:calendar-today-outline
+      text: Now
+    compare_button:
+      show: true
+      type: text
+      icon: mdi:compare-horizontal
+      text: Compare
     auto_sync_core: true
     auto_sync_helpers: true
     start_date_helper: input_datetime.energy_start_date
