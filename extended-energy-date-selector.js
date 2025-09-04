@@ -122,14 +122,16 @@ render() {
 
       </div>
 
-  <h3>Today Button</h3>
-  <ha-formfield label="Show Today Button">
-    <ha-switch
-      .checked=${this._config.today_button?.show ?? true}
-      .configValue=${"today_button.show"}
-      @change=${this._valueChanged}
-    ></ha-switch>
-  </ha-formfield>
+  <h3>=${this.hass.localize("ui.card.custom.today_button") || "Today button"}</h3>
+<ha-formfield
+  .label=${this.hass.localize("ui.card.custom.Show_today_button") || "Show Today Button"}
+>
+  <ha-switch
+    .checked=${this._config.today_button?.show ?? true}
+    .configValue=${"today_button.show"}
+    @change=${this._valueChanged}
+  ></ha-switch>
+</ha-formfield>
 
 ${this._config.today_button?.show !== false ? html`
   <div class="sub-option">
