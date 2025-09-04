@@ -23,7 +23,6 @@ After fiddling around with other cards like [Energy Period Selector Plus](https:
 - Make Compare work
 - auto_sync_core on/of
 - use local variables instead of global helpers
-- better yaml layout
   
 ## Install
 ### HACS (recommended)

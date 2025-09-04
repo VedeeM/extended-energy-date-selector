@@ -973,10 +973,10 @@ setConfig(config) {
         await this._updateEnergyCollection();
 
         if (this._config.debug) {
-        console.log(`Energy Period Selector: Updated helpers and energy collection - ${startDate} to ${endDate}`);
+        console.log(`extended-energy-date-selector: Updated helpers and energy collection - ${startDate} to ${endDate}`);
         }
     } catch (error) {
-        console.error('Energy Period Selector: Error updating:', error);
+        console.error('extended-energy-date-selector: Error updating:', error);
     }
     }
 
@@ -988,7 +988,7 @@ setConfig(config) {
         // Get the energy collection
         const energyCollection = await this._getEnergyCollection();
         if (!energyCollection) {
-        console.error('Energy Period Selector: Could not get energy collection');
+        console.error('extended-energy-date-selector: Could not get energy collection');
         return;
         }
 
@@ -999,13 +999,13 @@ setConfig(config) {
         energyCollection.refresh();
 
         if (this._config.debug) {
-        console.log('Energy Period Selector: Updated energy collection period', {
+        console.log('extended-energy-date-selector: Updated energy collection period', {
             start: this._startDate,
             end: this._endDate
         });
         }
     } catch (error) {
-        console.error('Energy Period Selector: Error updating energy collection:', error);
+        console.error('extended-energy-date-selector: Error updating energy collection:', error);
     }
     }
 
