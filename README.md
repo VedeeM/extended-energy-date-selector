@@ -21,19 +21,8 @@ After fiddling around with other cards like [Energy Period Selector Plus](https:
 - Show/hide HA card style
 ## ToDo
 - Make Compare work
-- auto_sync_core
-- Mobile
-
-      @media (max-width: 600px) {
-        .controls {
-            /* grid-template-columns: 1fr; */
-            gap: 8px;
-        }
-      @media (max-width: 600px) {
-        .period-buttons {
-            /* flex-direction: column; */
-            width: 100%;
-        }
+- auto_sync_core on/of
+- use local variables instead of global helpers
   
 ## Install
 ### HACS (recommended)
