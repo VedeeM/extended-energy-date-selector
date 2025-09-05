@@ -109,62 +109,7 @@ class extendedEnergyDateSelectorEditor extends LitElement {
     this._translationsLoaded = false;
   }
 
-static get styles() {
-  return css`
-    .form {
-      padding: 16px;
-    }
-    ha-formfield {
-      display: block;
-      padding: 8px 0;
-    }
-    ha-switch {
-      margin: 0 8px;
-    }
-    ha-textfield {
-      display: block;
-      width:100%;
-    }
-    .period-options, fieldset{
-      margin: 16px 0;
-      padding: 8px;
-      border: 1px solid var(--divider-color);
-      border-radius: 4px;
-    }
-    .sub-option {
-      margin-left: 32px;
-      margin-top: 8px;
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-    }
-    ha-select {
-      min-width: 140px;
-      width: 140px;
-      display: flex;
-      align-items: center;
-      margin: 8px 0;
-    }
-    ha-textfield, ha-icon-picker {
-      min-width: 200px;  // Set consistent width for both
-      display: flex;
-      align-items: center;
-      --mdc-text-field-filled-line-height: 48px;
-      margin: 8px 0;
-    }
-    ha-icon-picker {
-      --mdc-icon-button-size: 48px;  // Match height with textfield
-      --mdc-icon-size: 24px;
-    }
-    h3 {
-      margin: 16px 0 8px;
-      font-size: 16px;
-      font-weight: 500;
-    }
-  `;
-}
-
-async setConfig(config) {
+  async setConfig(config) {
   this._config = config;
   
   if (this.hass) {
@@ -204,6 +149,78 @@ _localize(key, fallback) {
   return result;
 }
 
+static get styles() {
+  return css`
+    ha-formfield {
+      display: block;
+      padding: 8px 0;
+    }
+    ha-switch {
+      margin: 0 8px;
+    }
+    ha-textfield {
+      display: block;
+      width:100%;
+    }
+    div.fieldset-container {
+      display: flex;
+      gap: 8px; /* Adds space between fieldsets */
+    }
+    fieldset.options {
+      flex: 1; /* Makes both fieldsets take equal width */
+    }    
+    fieldset{
+      margin: 0;
+      padding: 8px;
+      border: 1px solid var(--divider-color);
+      border-radius: 4px;
+    }
+    .sub-option {
+      margin-left: 32px;
+      margin-top: 8px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    ha-select {
+      min-width: 140px;
+      width: 140px;
+      display: flex;
+      align-items: center;
+      margin: 8px 0;
+    }
+    ha-textfield, ha-icon-picker {
+      min-width: 200px;  // Set consistent width for both
+      display: flex;
+      align-items: center;
+      --mdc-text-field-filled-line-height: 48px;
+      margin: 8px 0;
+    }
+    ha-icon-picker {
+      --mdc-icon-button-size: 48px;  // Match height with textfield
+      --mdc-icon-size: 24px;
+    }
+    h3 {
+      margin: 16px 0 8px;
+      font-size: 16px;
+      font-weight: 500;
+    }
+    @media (max-width: 600px) {
+      div.fieldset-container {
+        flex-flow: column;
+        gap: 0;
+      }
+      .sub-option {
+        margin-left: 10px 0;
+        display: flex;
+        flex-flow: column;
+        align-items: flex-start;
+        gap: 0;
+      }
+    }
+  `;
+}
+
 render() {
   if (!this.hass || !this._config || !this._translationsLoaded) {
     return html`<div>Loading...</div>`;
@@ -226,28 +243,49 @@ render() {
         @input=${this._valueChanged}
       ></ha-textfield>
 
-      <ha-formfield label="${this._localize('show_card_theme', 'Show Card Theme')}">
-        <ha-switch
-          .checked=${this._config.card_theme ?? true}
-          .configValue=${"card_theme"}
-          @change=${this._valueChanged}
-        ></ha-switch>
-      </ha-formfield>
+      <div class="fieldset-container">
+        <fieldset class="options">
+          <legend><h3>${this._localize('period_buttons', 'Period Buttons')}</h3></legend>
+          ${Object.entries(periodOptions).map(([value, label]) => html`
+            <ha-formfield label=${label}>
+              <ha-switch
+                .checked=${value === 'custom' 
+                  ? false 
+                  : this._config.period_buttons?.includes(value) ?? true}
+                .configValue=${value}
+                @change=${this._periodButtonChanged}
+              ></ha-switch>
+            </ha-formfield>
+          `)}
+        </fieldset>
 
-      <fieldset>
-        <legend><h3>${this._localize('period_buttons', 'Period Buttons')}</h3></legend>
-        ${Object.entries(periodOptions).map(([value, label]) => html`
-          <ha-formfield label=${label}>
+        <fieldset class="options">
+          <legend><h3>${this._localize('settings_buttons', 'Settings')}</h3></legend>
+          <ha-formfield label="${this._localize('prev_next_buttons', 'prev next buttons')}">
             <ha-switch
-              .checked=${value === 'custom' 
-                ? false 
-                : this._config.period_buttons?.includes(value) ?? true}
-              .configValue=${value}
-              @change=${this._periodButtonChanged}
+              .checked=${this._config.prev_next_buttons ?? true}
+              .configValue=${"prev_next_buttons"}
+              @change=${this._valueChanged}
             ></ha-switch>
           </ha-formfield>
-        `)}
-      </fieldset>
+
+          <ha-formfield label="${this._localize('show_card_theme', 'Show Card Theme')}">
+            <ha-switch
+              .checked=${this._config.card_theme ?? true}
+              .configValue=${"card_theme"}
+              @change=${this._valueChanged}
+            ></ha-switch>
+          </ha-formfield>
+
+          <ha-formfield label="${this._localize('debug_mode', 'Debug Mode')}">
+            <ha-switch
+              .checked=${this._config.debug ?? false}
+              .configValue=${"debug"}
+              @change=${this._valueChanged}
+            ></ha-switch>
+          </ha-formfield>
+        </fieldset>
+      </div>
 
   <h3>${this._localize('today_button', 'Today Button')}</h3>
   <ha-formfield label="${this._localize('show_today_button', 'Show Today Button')}">
@@ -365,23 +403,6 @@ ${this._config.compare_button?.show === true ? html`
             @change=${this._valueChanged}
           ></ha-switch>
         </ha-formfield>
-      </div>
-
-      <ha-formfield label="${this._localize('prev_next_buttons', 'prev next buttons')}">
-        <ha-switch
-          .checked=${this._config.prev_next_buttons ?? true}
-          .configValue=${"prev_next_buttons"}
-          @change=${this._valueChanged}
-        ></ha-switch>
-      </ha-formfield>
-
-      <ha-formfield label="${this._localize('debug_mode', 'Debug Mode')}">
-        <ha-switch
-          .checked=${this._config.debug ?? false}
-          .configValue=${"debug"}
-          @change=${this._valueChanged}
-        ></ha-switch>
-      </ha-formfield>
   </fieldset>
   `;
 }

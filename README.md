@@ -19,9 +19,12 @@ After fiddling around with other cards like [Energy Period Selector Plus](https:
 - UI Editor
 - Highly configurable
 - Show/hide HA card style
+- Mobile friendly
 ## ToDo
 - Make Compare work
 - use local variables instead of global helpers
+    The use of Global helpers has the disadvantage that a change of a date is reflected for all users simultaniously.
+    Although a huge problem, it would be better to find some per user variables
   
 ## Install
 ### HACS (recommended)
