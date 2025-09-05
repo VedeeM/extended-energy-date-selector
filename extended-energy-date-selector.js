@@ -1,9 +1,30 @@
 // extended-energy-date-selector.js
-// A reliable energy date selector with datetime helper integration
+// A reliable energy date selector with datetime helper integration and localization
 
 const LitElement = window.LitElement || Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = window.LitHtml?.html || LitElement.prototype.html;
 const css = window.LitHtml?.css || LitElement.prototype.css;
+
+// simple in-memory cache
+const translationsCache = {};
+
+async function loadTranslation(lang) {
+  if (translationsCache[lang]) return translationsCache[lang];
+  try {
+    const url = `${import.meta.url.substring(0, import.meta.url.lastIndexOf("/"))}/translations/${lang}.json`;
+    const res = await fetch(url);
+    translationsCache[lang] = await res.json();
+  } catch {
+    translationsCache[lang] = {};
+  }
+  return translationsCache[lang];
+}
+
+async function initTranslations(hass) {
+  const lang = hass?.language || (navigator.language || "en").split("-")[0];
+  await loadTranslation("en");  // always load English fallback
+  await loadTranslation(lang);  // and the active language
+}
 
 //---------------------------------------//
 // UI Editor for extendedEnergyDateSelector //
@@ -72,9 +93,17 @@ static get styles() {
   `;
 }
 
-  setConfig(config) {
-    this._config = config;
-  }
+async setConfig(config) {
+  this._config = config;
+  await initTranslations(this.hass);
+}
+
+_localize(key, fallback) {
+  const lang = this.hass?.language || (navigator.language || "en").split("-")[0];
+  const translations = translationsCache[lang] || {};
+  const english = translationsCache["en"] || {};
+  return translations[key] || english[key] || fallback || key;
+}
 
 render() {
   if (!this.hass || !this._config) {
@@ -82,23 +111,23 @@ render() {
   }
 
   const periodOptions = {
-    day: "Day",
-    week: "Week",
-    month: "Month",
-    year: "Year",
-    custom: "Custom"
+    day: this._localize('day', 'Day'),
+    week: this._localize('week', 'Week'),
+    month: this._localize('month', 'Month'),
+    year: this._localize('year', 'Year'),
+    custom: this._localize('custom', 'Custom')
   };
 
   return html`
     <div class="form">
       <ha-textfield
-        label="Title (optional)"
+        label="${this._localize('title_optional', 'Title (optional)')}"
         .value=${this._config.title || ""}
         .configValue=${"title"}
         @input=${this._valueChanged}
       ></ha-textfield>
 
-      <ha-formfield label="Show Card Theme">
+      <ha-formfield label="${this._localize('show_card_theme', 'Show Card Theme')}">
         <ha-switch
           .checked=${this._config.card_theme ?? true}
           .configValue=${"card_theme"}
@@ -107,7 +136,7 @@ render() {
       </ha-formfield>
 
       <div class="period-options">
-        <h3>Period Buttons</h3>
+        <h3>${this._localize('period_buttons', 'Period Buttons')}</h3>
         ${Object.entries(periodOptions).map(([value, label]) => html`
           <ha-formfield label=${label}>
             <ha-switch
@@ -122,8 +151,8 @@ render() {
 
       </div>
 
-  <h3>Today Button</h3>
-  <ha-formfield label="Show Today Button">
+  <h3>${this._localize('today_button', 'Today Button')}</h3>
+  <ha-formfield label="${this._localize('show_today_button', 'Show Today Button')}">
     <ha-switch
       .checked=${this._config.today_button?.show ?? true}
       .configValue=${"today_button.show"}
@@ -134,27 +163,27 @@ render() {
 ${this._config.today_button?.show !== false ? html`
   <div class="sub-option">
     <ha-select
-      label="Today Button Type"
+      label="${this._localize('today_button_type', 'Today Button Type')}"
       .value=${this._config.today_button?.type ?? "icon"}
       .configValue=${"today_button.type"}
       @selected=${this._valueChanged}
       @closed=${(ev) => ev.stopPropagation()}
     >
-      <ha-list-item value="text">Text</ha-list-item>
-      <ha-list-item value="icon">Icon</ha-list-item>
+      <ha-list-item value="text">${this._localize('text', 'Text')}</ha-list-item>
+      <ha-list-item value="icon">${this._localize('icon', 'Icon')}</ha-list-item>
     </ha-select>
 
     ${this._config.today_button?.type === "icon" ? html`
       <ha-icon-picker
-        label="Today Button Icon"
+        label="${this._localize('today_button_icon', 'Today Button Icon')}"
         .value=${this._config.today_button?.icon || "mdi:calendar-today"}
         .configValue=${"today_button.icon"}
         @value-changed=${this._valueChanged}
       ></ha-icon-picker>
     ` : html`
       <ha-textfield
-        label="Today Button Text"
-        .value=${this._config.today_button?.text || "Today"}
+        label="${this._localize('today_button_text', 'Today Button Text')}"
+        .value=${this._config.today_button?.text || this._localize('today', 'Today')}
         .configValue=${"today_button.text"}
         @input=${this._valueChanged}
       ></ha-textfield>
@@ -162,8 +191,8 @@ ${this._config.today_button?.show !== false ? html`
   </div>
 ` : ""}
 
-      <h3>Compare Button</h3>
-      <ha-formfield label="Show Compare Button">
+      <h3>${this._localize('compare_button', 'Compare Button')}</h3>
+      <ha-formfield label="${this._localize('show_compare_button', 'Show Compare Button')}">
         <ha-switch
           .checked=${this._config.compare_button?.show ?? false}
           .configValue=${"compare_button.show"}
@@ -174,27 +203,27 @@ ${this._config.today_button?.show !== false ? html`
 ${this._config.compare_button?.show === true ? html`
   <div class="sub-option">
     <ha-select
-      label="Compare Button Type"
+      label="${this._localize('compare_button_type', 'Compare Button Type')}"
       .value=${this._config.compare_button?.type || "text"}
       .configValue=${"compare_button.type"}
       @selected=${this._valueChanged}
       @closed=${(ev) => ev.stopPropagation()}
     >
-      <ha-list-item value="text">Text</ha-list-item>
-      <ha-list-item value="icon">Icon</ha-list-item>
+      <ha-list-item value="text">${this._localize('text', 'Text')}</ha-list-item>
+      <ha-list-item value="icon">${this._localize('icon', 'Icon')}</ha-list-item>
     </ha-select>
 
     ${this._config.compare_button?.type === "icon" ? html`
       <ha-icon-picker
-        label="Compare Button Icon"
+        label="${this._localize('compare_button_icon', 'Compare Button Icon')}"
         .value=${this._config.compare_button?.icon || "mdi:compare"}
         .configValue=${"compare_button.icon"}
         @value-changed=${this._valueChanged}
       ></ha-icon-picker>
     ` : html`
       <ha-textfield
-        label="Compare Button Text"
-        .value=${this._config.compare_button?.text || "Compare"}
+        label="${this._localize('compare_button_text', 'Compare Button Text')}"
+        .value=${this._config.compare_button?.text || this._localize('compare', 'Compare')}
         .configValue=${"compare_button.text"}
         @input=${this._valueChanged}
       ></ha-textfield>
@@ -203,20 +232,20 @@ ${this._config.compare_button?.show === true ? html`
 ` : ""}
 
       <ha-textfield
-        label="Start Date Helper"
+        label="${this._localize('start_date_helper', 'Start Date Helper')}"
         .value=${this._config.start_date_helper || "input_datetime.energy_start_date"}
         .configValue=${"start_date_helper"}
         @input=${this._valueChanged}
       ></ha-textfield>
 
       <ha-textfield
-        label="End Date Helper"
+        label="${this._localize('end_date_helper', 'End Date Helper')}"
         .value=${this._config.end_date_helper || "input_datetime.energy_end_date"}
         .configValue=${"end_date_helper"}
         @input=${this._valueChanged}
       ></ha-textfield>
 
-      <ha-formfield label="Auto Sync Helpers">
+      <ha-formfield label="${this._localize('auto_sync_helpers', 'Auto Sync Helpers')}">
         <ha-switch
           .checked=${this._config.auto_sync_helpers ?? true}
           .configValue=${"auto_sync_helpers"}
@@ -224,7 +253,7 @@ ${this._config.compare_button?.show === true ? html`
         ></ha-switch>
       </ha-formfield>
 
-      <ha-formfield label="prev next buttons">
+      <ha-formfield label="${this._localize('prev_next_buttons', 'prev next buttons')}">
         <ha-switch
           .checked=${this._config.prev_next_buttons ?? true}
           .configValue=${"prev_next_buttons"}
@@ -232,7 +261,7 @@ ${this._config.compare_button?.show === true ? html`
         ></ha-switch>
       </ha-formfield>
 
-      <ha-formfield label="Debug Mode">
+      <ha-formfield label="${this._localize('debug_mode', 'Debug Mode')}">
         <ha-switch
           .checked=${this._config.debug ?? false}
           .configValue=${"debug"}
@@ -242,10 +271,6 @@ ${this._config.compare_button?.show === true ? html`
     </div>
   `;
 }
-
-// _localize(key, defaultText) {
-//   return this.hass?.localize?.(key) || defaultText;
-// }
 
 // handle period button changes
 _periodButtonChanged(ev) {
@@ -269,12 +294,6 @@ _periodButtonChanged(ev) {
   } else if (!isChecked) {
     periodButtons = periodButtons.filter(p => p !== periodValue);
   }
-
-  // Ensure at least one period button is enabled
-//   if (periodButtons.length === 0) {
-//     periodButtons = ['day'];
-//     target.checked = true;
-//   }
 
   const newConfig = {
     ...this._config,
@@ -382,7 +401,7 @@ static getStubConfig() {
   };
 }
 
-setConfig(config) {
+async setConfig(config) {
   if (!config) {
     throw new Error('Invalid configuration');
   }
@@ -415,7 +434,10 @@ setConfig(config) {
   if (this._isInitialized) {
     this._render();
     this._setupEventListeners();
-  }
+  };
+
+  // Initialize translations
+  await initTranslations(this.hass);
 }
 
   set hass(hass) {
@@ -431,6 +453,13 @@ setConfig(config) {
 
   get hass() {
     return this._hass;
+  }
+
+  _localize(key, fallback) {
+    const lang = this.hass?.language || (navigator.language || "en").split("-")[0];
+    const translations = translationsCache[lang] || {};
+    const english = translationsCache["en"] || {};
+    return translations[key] || english[key] || fallback || key;
   }
 
   _initializeCard() {
@@ -452,18 +481,6 @@ setConfig(config) {
   _render() {
     const showCard = this._config.card_theme;
     const title = this._config.title;
-    const cardStyle = `
-        ha-card {
-        background: ${showCard ? 'var(--card-background-color)' : 'transparent'};
-        box-shadow: ${showCard ? 'var(--card-box-shadow)' : 'none'};
-        border-radius: ${showCard ? 'var(--card-border-radius, 8px)' : '0'};
-        padding: ${showCard ? '16px' : '0'};
-        transition: background 0.3s, box-shadow 0.3s, border-radius 0.3s, padding 0.3s;
-        }
-        .card-content {
-        /* Optional internal spacing */
-        }
-        `;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -649,29 +666,29 @@ setConfig(config) {
           
           <div class="controls">
             <div class="nav-buttons ${this._config.prev_next_buttons ? '' : 'hidden'}" id="navButtons">
-            <button class="nav-button" id="prevButton" title="Previous">
+            <button class="nav-button" id="prevButton" title="${this._localize('previous', 'Previous')}">
                 <ha-icon icon="mdi:chevron-left"></ha-icon>
             </button>
-            <button class="nav-button" id="nextButton" title="Next">
+            <button class="nav-button" id="nextButton" title="${this._localize('next', 'Next')}">
                 <ha-icon icon="mdi:chevron-right"></ha-icon>
             </button>
             </div>
             
-            <div class="date-range" id="dateRange">Loading...</div>
+            <div class="date-range" id="dateRange">${this._localize('loading', 'Loading...')}</div>
             
             <div class="action-buttons">
             ${this._config.today_button?.show ? `
                 <button class="today-button" id="todayButton">
                 ${this._config.today_button?.type === 'icon' ? `
                     <ha-icon icon="${this._config.today_button?.icon}"></ha-icon>
-                ` : (this._config.today_button?.text || 'Today')}
+                ` : (this._config.today_button?.text || this._localize('today', 'Today'))}
                 </button>
             ` : ''}
             ${this._config.compare_button?.show ? `
                 <button class="compare-button" id="compareButton">
                 ${this._config.compare_button?.type === 'icon' ? `
                     <ha-icon icon="${this._config.compare_button?.icon}"></ha-icon>
-                ` : (this._config.compare_button?.text || 'Compare')}
+                ` : (this._config.compare_button?.text || this._localize('compare', 'Compare'))}
                 </button>
             ` : ''}
             </div>
@@ -679,9 +696,9 @@ setConfig(config) {
           
           <div class="custom-picker hidden" id="customPicker">
             <input type="date" id="startDatePicker" />
-            <span>to</span>
+            <span>${this._localize('to', 'to')}</span>
             <input type="date" id="endDatePicker" />
-            <button class="period-button" id="applyCustom">Apply</button>
+            <button class="period-button" id="applyCustom">${this._localize('apply', 'Apply')}</button>
           </div>
         </div>
 
@@ -698,11 +715,11 @@ setConfig(config) {
     if (!container) return;
 
     const periodLabels = {
-      day: 'Day',
-      week: 'Week', 
-      month: 'Month',
-      year: 'Year',
-      custom: this._config.custom_period_label || 'Custom'
+      day: this._localize('day', 'Day'),
+      week: this._localize('week', 'Week'), 
+      month: this._localize('month', 'Month'),
+      year: this._localize('year', 'Year'),
+      custom: this._config.custom_period_label || this._localize('custom', 'Custom')
     };
 
     container.innerHTML = '';
@@ -1040,7 +1057,6 @@ setConfig(config) {
     return getCollection(this._hass.connection);
     }
 
-
   _fireEnergyPeriodChanged() {
     if (!this._startDate || !this._endDate) return;
 
@@ -1100,12 +1116,12 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: 'extended-energy-date-selector',
   name: 'extended Energy Date Selector',
-  description: 'A reliable energy date selector with datetime helper integration'
+  description: 'A reliable energy date selector with datetime helper integration and localization'
 });
 
 // Console info
 console.info(
-  '%c extended-energy-date-selector %c v1.0.0 ',
+  '%c extended-energy-date-selector %c v1.1.0 ',
   'color: white; background: green; font-weight: 700;',
   'color: green; background: white; font-weight: 700;'
 );
