@@ -5,90 +5,25 @@ const LitElement = window.LitElement || Object.getPrototypeOf(customElements.get
 const html = window.LitHtml?.html || LitElement.prototype.html;
 const css = window.LitHtml?.css || LitElement.prototype.css;
 
-// Enhanced translation cache with better error handling
+// simple in-memory cache
 const translationsCache = {};
-let isLoadingTranslations = false;
-
-function normalizeLanguageCode(lang) {
-  if (!lang) return 'en';
-  // Handle language codes like 'en-US' -> 'en', 'zh-CN' -> 'zh', etc.
-  return lang.toLowerCase().split('-')[0];
-}
 
 async function loadTranslation(lang) {
-  const normalizedLang = normalizeLanguageCode(lang);
-  
-  if (translationsCache[normalizedLang]) {
-    return translationsCache[normalizedLang];
-  }
-  
-  // Prevent multiple simultaneous loads of the same language
-  if (translationsCache[`${normalizedLang}_loading`]) {
-    // Wait for existing load to complete
-    return new Promise((resolve) => {
-      const checkLoaded = () => {
-        if (translationsCache[normalizedLang] || !translationsCache[`${normalizedLang}_loading`]) {
-          resolve(translationsCache[normalizedLang] || {});
-        } else {
-          setTimeout(checkLoaded, 50);
-        }
-      };
-      checkLoaded();
-    });
-  }
-
-  translationsCache[`${normalizedLang}_loading`] = true;
-
+  if (translationsCache[lang]) return translationsCache[lang];
   try {
-    const baseUrl = import.meta.url.substring(0, import.meta.url.lastIndexOf("/"));
-    const url = `${baseUrl}/translations/${normalizedLang}.json`;
-    
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    
-    const translations = await response.json();
-    translationsCache[normalizedLang] = translations;
-    
-    console.log(`extended-energy-date-selector: Loaded translations for ${normalizedLang}`, Object.keys(translations));
-    
-    return translations;
-  } catch (error) {
-    console.warn(`extended-energy-date-selector: Failed to load translations for ${normalizedLang}:`, error);
-    translationsCache[normalizedLang] = {}; // Cache empty object to prevent retry loops
-    return {};
-  } finally {
-    delete translationsCache[`${normalizedLang}_loading`];
+    const url = `${import.meta.url.substring(0, import.meta.url.lastIndexOf("/"))}/translations/${lang}.json`;
+    const res = await fetch(url);
+    translationsCache[lang] = await res.json();
+  } catch {
+    translationsCache[lang] = {};
   }
+  return translationsCache[lang];
 }
 
 async function initTranslations(hass) {
-  if (isLoadingTranslations) return;
-  
-  isLoadingTranslations = true;
-  
-  try {
-    const userLang = hass?.language || navigator.language || 'en';
-    const normalizedLang = normalizeLanguageCode(userLang);
-    
-    console.log(`extended-energy-date-selector: Initializing translations for ${userLang} (${normalizedLang})`);
-    
-    // Always load English first as fallback
-    await loadTranslation('en');
-    
-    // Load user language if it's not English
-    if (normalizedLang !== 'en') {
-      await loadTranslation(normalizedLang);
-    }
-    
-    console.log('extended-energy-date-selector: Translation cache:', Object.keys(translationsCache));
-  } catch (error) {
-    console.error('extended-energy-date-selector: Error initializing translations:', error);
-  } finally {
-    isLoadingTranslations = false;
-  }
+  const lang = hass?.language || (navigator.language || "en").split("-")[0];
+  await loadTranslation("en");  // always load English fallback
+  await loadTranslation(lang);  // and the active language
 }
 
 //---------------------------------------//
@@ -100,13 +35,7 @@ class extendedEnergyDateSelectorEditor extends LitElement {
     return {
       hass: { type: Object },
       _config: { type: Object },
-      _translationsLoaded: { type: Boolean }
     };
-  }
-
-  constructor() {
-    super();
-    this._translationsLoaded = false;
   }
 
 static get styles() {
@@ -166,47 +95,19 @@ static get styles() {
 
 async setConfig(config) {
   this._config = config;
-  
-  if (this.hass) {
-    await this._initializeTranslations();
-  }
-}
-
-async _initializeTranslations() {
   await initTranslations(this.hass);
-  this._translationsLoaded = true;
-  this.requestUpdate();
-}
-
-async updated(changedProps) {
-  super.updated(changedProps);
-  
-  // Initialize translations when hass becomes available
-  if (changedProps.has('hass') && this.hass && !this._translationsLoaded) {
-    await this._initializeTranslations();
-  }
 }
 
 _localize(key, fallback) {
-  const userLang = this.hass?.language || navigator.language || 'en';
-  const normalizedLang = normalizeLanguageCode(userLang);
-  
-  const translations = translationsCache[normalizedLang] || {};
-  const english = translationsCache['en'] || {};
-  
-  const result = translations[key] || english[key] || fallback || key;
-  
-  // Debug logging for translation issues
-  if (result === key && key !== fallback) {
-    console.warn(`extended-energy-date-selector: Missing translation for '${key}' in ${normalizedLang}`);
-  }
-  
-  return result;
+  const lang = this.hass?.language || (navigator.language || "en").split("-")[0];
+  const translations = translationsCache[lang] || {};
+  const english = translationsCache["en"] || {};
+  return translations[key] || english[key] || fallback || key;
 }
 
 render() {
-  if (!this.hass || !this._config || !this._translationsLoaded) {
-    return html`<div>Loading...</div>`;
+  if (!this.hass || !this._config) {
+    return html``;
   }
 
   const periodOptions = {
@@ -475,7 +376,6 @@ class extendedEnergyDateSelector extends HTMLElement {
     this._startDate = null;
     this._endDate = null;
     this._isInitialized = false;
-    this._translationsLoaded = false;
     this._retryCount = 0;
     this._maxRetries = 10;
     this._initTimeout = null;
@@ -540,31 +440,19 @@ async setConfig(config) {
     debug: config.debug === true
   };
 
-  // Initialize translations when hass is available
-  if (this._hass) {
-    await this._initializeTranslations();
-  }
-
   // Force a re-render when config changes
   if (this._isInitialized) {
     this._render();
     this._setupEventListeners();
-  }
+  };
+
+  // Initialize translations
+  await initTranslations(this.hass);
 }
 
   set hass(hass) {
     const oldHass = this._hass;
     this._hass = hass;
-    
-    // Initialize translations when hass becomes available
-    if (hass && (!oldHass || oldHass.language !== hass.language)) {
-      this._initializeTranslations().then(() => {
-        if (this._isInitialized) {
-          this._render(); // Re-render with new translations
-          this._setupEventListeners();
-        }
-      });
-    }
     
     if (!oldHass || !this._isInitialized) {
       this._initializeCard();
@@ -577,55 +465,20 @@ async setConfig(config) {
     return this._hass;
   }
 
-  async _initializeTranslations() {
-    if (!this._hass) return;
-    
-    try {
-      await initTranslations(this._hass);
-      this._translationsLoaded = true;
-      
-      if (this._config?.debug) {
-        console.log('extended-energy-date-selector: Translations loaded for', this._hass.language);
-      }
-    } catch (error) {
-      console.error('extended-energy-date-selector: Failed to initialize translations:', error);
-      this._translationsLoaded = false;
-    }
-  }
-
   _localize(key, fallback) {
-    if (!this._translationsLoaded) {
-      return fallback || key;
-    }
-    
-    const userLang = this._hass?.language || navigator.language || 'en';
-    const normalizedLang = normalizeLanguageCode(userLang);
-    
-    const translations = translationsCache[normalizedLang] || {};
-    const english = translationsCache['en'] || {};
-    
-    const result = translations[key] || english[key] || fallback || key;
-    
-    // Debug logging for translation issues
-    if (this._config?.debug && result === key && key !== fallback) {
-      console.warn(`extended-energy-date-selector: Missing translation for '${key}' in ${normalizedLang}`);
-    }
-    
-    return result;
+    const lang = this.hass?.language || (navigator.language || "en").split("-")[0];
+    const translations = translationsCache[lang] || {};
+    const english = translationsCache["en"] || {};
+    return translations[key] || english[key] || fallback || key;
   }
 
-  async _initializeCard() {
+  _initializeCard() {
     if (!this._hass || !this._config) {
       if (this._retryCount < this._maxRetries) {
         this._retryCount++;
         setTimeout(() => this._initializeCard(), 1000);
       }
       return;
-    }
-
-    // Wait for translations to be loaded
-    if (!this._translationsLoaded) {
-      await this._initializeTranslations();
     }
 
     this._retryCount = 0;
@@ -1115,19 +968,13 @@ async setConfig(config) {
     const debugInfo = this.shadowRoot.getElementById('debugInfo');
     if (!debugInfo) return;
 
-    const userLang = this._hass?.language || navigator.language || 'en';
-    const normalizedLang = normalizeLanguageCode(userLang);
-
     debugInfo.innerHTML = `
       Period: ${this._currentPeriod}<br>
       Start: ${this._startDate?.toISOString().split('T')[0]}<br>
       End: ${this._endDate?.toISOString().split('T')[0]}<br>
       Start Helper: ${this._config.start_date_helper}<br>
       End Helper: ${this._config.end_date_helper}<br>
-      Auto Sync: ${this._config.auto_sync_helpers}<br>
-      User Lang: ${userLang} (${normalizedLang})<br>
-      Translations Loaded: ${this._translationsLoaded}<br>
-      Available Languages: ${Object.keys(translationsCache).filter(k => !k.endsWith('_loading')).join(', ')}
+      Auto Sync: ${this._config.auto_sync_helpers}
     `;
   }
 
@@ -1271,6 +1118,16 @@ async setConfig(config) {
   }
 }
 
+// Event fired by core energy cards:
+// `hass` = Home Assistant object
+// `detail` = { startDate: "YYYY-MM-DD", endDate: "YYYY-MM-DD" }
+window.addEventListener("ha-energy-date-changed", (ev) => {
+  if (!this._syncWithCore) return;  // ignore if sync disabled
+  const { startDate, endDate } = ev.detail;
+
+  this._updateDateRange(startDate, endDate);
+});
+
 // Register the custom element
 customElements.define('extended-energy-date-selector', extendedEnergyDateSelector);
 
@@ -1284,8 +1141,7 @@ window.customCards.push({
 
 // Console info
 console.info(
-  '%c extended-energy-date-selector %c v1.2.0 ',
+  '%c extended-energy-date-selector %c v1.1.0 ',
   'color: white; background: green; font-weight: 700;',
   'color: green; background: white; font-weight: 700;'
 );
-         
