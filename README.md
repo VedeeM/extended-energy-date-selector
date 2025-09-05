@@ -21,7 +21,6 @@ After fiddling around with other cards like [Energy Period Selector Plus](https:
 - Show/hide HA card style
 ## ToDo
 - Make Compare work
-- auto_sync_core on/of
 - use local variables instead of global helpers
   
 ## Install
@@ -100,6 +99,7 @@ i.e. `today_button_text` is not used when `today_button_type` is set to `icon`
     auto_sync_helpers: true
     start_date_helper: input_datetime.energy_start_date
     end_date_helper: input_datetime.energy_end_date
+    auto_sync_core: true
     prev_next_buttons: true
     debug: false
 ### apexchart-card example

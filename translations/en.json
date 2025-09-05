@@ -1,5 +1,5 @@
 {
-  "day": "Daay",
+  "day": "Day",
   "week": "Week", 
   "month": "Month",
   "year": "Year",
@@ -26,6 +26,7 @@
   "compare_button_text": "Compare Button Text",
   "start_date_helper": "Start Date Helper",
   "end_date_helper": "End Date Helper",
+  "sync_settings": "Synchronisation",
   "auto_sync_helpers": "Auto Sync Helpers",
   "auto_sync_core": "Auto Sync Core",
   "prev_next_buttons": "prev next buttons",

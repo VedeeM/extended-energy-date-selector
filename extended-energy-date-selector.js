@@ -125,7 +125,7 @@ static get styles() {
       display: block;
       width:100%;
     }
-    .period-options {
+    .period-options, fieldset{
       margin: 16px 0;
       padding: 8px;
       border: 1px solid var(--divider-color);
@@ -234,8 +234,8 @@ render() {
         ></ha-switch>
       </ha-formfield>
 
-      <div class="period-options">
-        <h3>${this._localize('period_buttons', 'Period Buttons')}</h3>
+      <fieldset>
+        <legend><h3>${this._localize('period_buttons', 'Period Buttons')}</h3></legend>
         ${Object.entries(periodOptions).map(([value, label]) => html`
           <ha-formfield label=${label}>
             <ha-switch
@@ -247,8 +247,7 @@ render() {
             ></ha-switch>
           </ha-formfield>
         `)}
-
-      </div>
+      </fieldset>
 
   <h3>${this._localize('today_button', 'Today Button')}</h3>
   <ha-formfield label="${this._localize('show_today_button', 'Show Today Button')}">
@@ -330,35 +329,43 @@ ${this._config.compare_button?.show === true ? html`
   </div>
 ` : ""}
 
-      <ha-textfield
-        label="${this._localize('start_date_helper', 'Start Date Helper')}"
-        .value=${this._config.start_date_helper || "input_datetime.energy_start_date"}
-        .configValue=${"start_date_helper"}
-        @input=${this._valueChanged}
-      ></ha-textfield>
+  <fieldset>
+    <legend><h3>${this._localize('sync_settings', 'Sync settings')}</h3></legend>
 
-      <ha-textfield
-        label="${this._localize('end_date_helper', 'End Date Helper')}"
-        .value=${this._config.end_date_helper || "input_datetime.energy_end_date"}
-        .configValue=${"end_date_helper"}
-        @input=${this._valueChanged}
-      ></ha-textfield>
+        <ha-formfield label="${this._localize('auto_sync_helpers', 'Auto Sync Helpers')}">
+          <ha-switch
+            .checked=${this._config.auto_sync_helpers ?? true}
+            .configValue=${"auto_sync_helpers"}
+            @change=${this._valueChanged}
+          ></ha-switch>
+        </ha-formfield>
 
-      <ha-formfield label="${this._localize('auto_sync_helpers', 'Auto Sync Helpers')}">
-        <ha-switch
-          .checked=${this._config.auto_sync_helpers ?? true}
-          .configValue=${"auto_sync_helpers"}
-          @change=${this._valueChanged}
-        ></ha-switch>
-      </ha-formfield>
+        ${this._config.auto_sync_helpers !== false ? html`
+          <div class="sub-option">
+            <ha-textfield
+              label="${this._localize('start_date_helper', 'Start Date Helper')}"
+              .value=${this._config.start_date_helper || "input_datetime.energy_start_date"}
+              .configValue=${"start_date_helper"}
+              @input=${this._valueChanged}
+            ></ha-textfield>
 
-      <ha-formfield label="${this._localize('auto_sync_core', 'Auto Sync Core')}">
-        <ha-switch
-          .checked=${this._config.auto_sync_core ?? true}
-          .configValue=${"auto_sync_core"}
-          @change=${this._valueChanged}
-        ></ha-switch>
-      </ha-formfield>
+            <ha-textfield
+              label="${this._localize('end_date_helper', 'End Date Helper')}"
+              .value=${this._config.end_date_helper || "input_datetime.energy_end_date"}
+              .configValue=${"end_date_helper"}
+              @input=${this._valueChanged}
+            ></ha-textfield>
+          </div>
+        ` : ""}
+
+        <ha-formfield label="${this._localize('auto_sync_core', 'Auto Sync Core')}">
+          <ha-switch
+            .checked=${this._config.auto_sync_core ?? true}
+            .configValue=${"auto_sync_core"}
+            @change=${this._valueChanged}
+          ></ha-switch>
+        </ha-formfield>
+      </div>
 
       <ha-formfield label="${this._localize('prev_next_buttons', 'prev next buttons')}">
         <ha-switch
@@ -375,7 +382,7 @@ ${this._config.compare_button?.show === true ? html`
           @change=${this._valueChanged}
         ></ha-switch>
       </ha-formfield>
-    </div>
+  </fieldset>
   `;
 }
 
@@ -492,7 +499,7 @@ static getStubConfig() {
     today_button: {
       show: true,
       type: 'icon',
-      text: 'Today',
+      text: this._localize('today', 'Today'),
       icon: 'mdi:calendar-today'
     },
     compare_button: {
@@ -521,13 +528,13 @@ async setConfig(config) {
     today_button: {
       show: config.today_button?.show !== false,
       type: config.today_button?.type ?? 'icon',
-      text: config.today_button?.text || 'Today',
+      text: config.today_button?.text || this._localize('today', 'Today'),
       icon: config.today_button?.icon || 'mdi:calendar-today'
     },
     compare_button: {
       show: config.compare_button?.show === true,
       type: config.compare_button?.type ?? 'text',
-      text: config.compare_button?.text || 'Compare',
+      text: config.compare_button?.text || this._localize('compare', 'Compare'),
       icon: config.compare_button?.icon || 'mdi:compare'
     },
     prev_next_buttons: config.prev_next_buttons !== false,
@@ -593,26 +600,22 @@ async setConfig(config) {
     }
   }
 
-  _localize(key, fallback) {
-    if (!this._translationsLoaded) {
-      return fallback || key;
-    }
-    
-    const userLang = this._hass?.language || navigator.language || 'en';
-    const normalizedLang = normalizeLanguageCode(userLang);
-    
-    const translations = translationsCache[normalizedLang] || {};
-    const english = translationsCache['en'] || {};
-    
-    const result = translations[key] || english[key] || fallback || key;
-    
-    // Debug logging for translation issues
-    if (this._config?.debug && result === key && key !== fallback) {
-      console.warn(`extended-energy-date-selector: Missing translation for '${key}' in ${normalizedLang}`);
-    }
-    
-    return result;
+_localize(key, fallback) {
+  const userLang = this.hass?.language || navigator.language || 'en';
+  const normalizedLang = normalizeLanguageCode(userLang);
+  
+  const translations = translationsCache[normalizedLang] || {};
+  const english = translationsCache['en'] || {};
+  
+  const result = translations[key] || english[key] || fallback || key;
+  
+  // Debug logging for translation issues
+  if (result === key && key !== fallback) {
+    console.warn(`extended-energy-date-selector: Missing translation for '${key}' in ${normalizedLang}`);
   }
+  
+  return result;
+}
 
   async _initializeCard() {
     if (!this._hass || !this._config) {
@@ -835,14 +838,14 @@ async setConfig(config) {
             
             <div class="action-buttons">
             ${this._config.today_button?.show ? `
-                <button class="today-button" id="todayButton">
+                <button class="today-button" id="todayButton" title="${this._localize('today', 'Today')}">
                 ${this._config.today_button?.type === 'icon' ? `
                     <ha-icon icon="${this._config.today_button?.icon}"></ha-icon>
                 ` : (this._config.today_button?.text || this._localize('today', 'Today'))}
                 </button>
             ` : ''}
             ${this._config.compare_button?.show ? `
-                <button class="compare-button" id="compareButton">
+                <button class="compare-button" id="compareButton" title="${this._localize('compare', 'Compare')}">
                 ${this._config.compare_button?.type === 'icon' ? `
                     <ha-icon icon="${this._config.compare_button?.icon}"></ha-icon>
                 ` : (this._config.compare_button?.text || this._localize('compare', 'Compare'))}
@@ -971,6 +974,7 @@ async setConfig(config) {
 
     this._updateDateDisplay();
     this._syncToHelpers();
+    this._updateEnergyCollection();
     this._fireEnergyPeriodChanged();
   }
 
@@ -1038,6 +1042,7 @@ async setConfig(config) {
     this._endDate = end;
     this._updateDateDisplay();
     this._syncToHelpers();
+    this._updateEnergyCollection();
     this._fireEnergyPeriodChanged();
   }
 
@@ -1053,6 +1058,7 @@ async setConfig(config) {
     
     this._updateDateDisplay();
     this._syncToHelpers();
+    this._updateEnergyCollection();
     this._fireEnergyPeriodChanged();
   }
 
@@ -1084,6 +1090,7 @@ async setConfig(config) {
   _applyCustomRange() {
     this._updateCustomRange();
     this._syncToHelpers();
+    this._updateEnergyCollection();
     this._fireEnergyPeriodChanged();
   }
 
@@ -1154,7 +1161,7 @@ async setConfig(config) {
         ]);
 
         // Update energy collection
-        await this._updateEnergyCollection();
+        //await this._updateEnergyCollection();
 
         if (this._config.debug) {
         console.log(`extended-energy-date-selector: Updated helpers and energy collection - ${startDate} to ${endDate}`);

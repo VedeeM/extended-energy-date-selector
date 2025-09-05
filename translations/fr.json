@@ -26,6 +26,7 @@
   "compare_button_text": "Texte du bouton Comparer",
   "start_date_helper": "Assistant de date de début",
   "end_date_helper": "Assistant de date de fin",
+  "sync_settings": "Synchronisation",
   "auto_sync_helpers": "Auto sync les assistants",
   "auto_sync_core": "Auto sync  le core",
   "prev_next_buttons": "Boutons précédent/suivant",
