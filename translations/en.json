@@ -1,5 +1,5 @@
 {
-  "day": "Day",
+  "day": "Daay",
   "week": "Week", 
   "month": "Month",
   "year": "Year",
@@ -27,6 +27,7 @@
   "start_date_helper": "Start Date Helper",
   "end_date_helper": "End Date Helper",
   "auto_sync_helpers": "Auto Sync Helpers",
+  "auto_sync_core": "Auto Sync Core",
   "prev_next_buttons": "prev next buttons",
   "debug_mode": "Debug Mode",
   "text": "Text",
