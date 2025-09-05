@@ -122,16 +122,14 @@ render() {
 
       </div>
 
-  <h3>=${this.hass.localize("ui.card.custom.today_button") || "Today button"}</h3>
-<ha-formfield
-  .label=${this.hass.localize("ui.card.custom.Show_today_button") || "Show Today Button"}
->
-  <ha-switch
-    .checked=${this._config.today_button?.show ?? true}
-    .configValue=${"today_button.show"}
-    @change=${this._valueChanged}
-  ></ha-switch>
-</ha-formfield>
+  <h3>Today Button</h3>
+  <ha-formfield label="Show Today Button">
+    <ha-switch
+      .checked=${this._config.today_button?.show ?? true}
+      .configValue=${"today_button.show"}
+      @change=${this._valueChanged}
+    ></ha-switch>
+  </ha-formfield>
 
 ${this._config.today_button?.show !== false ? html`
   <div class="sub-option">
@@ -226,7 +224,7 @@ ${this._config.compare_button?.show === true ? html`
         ></ha-switch>
       </ha-formfield>
 
-     <ha-formfield label="prev next buttons">
+      <ha-formfield label="prev next buttons">
         <ha-switch
           .checked=${this._config.prev_next_buttons ?? true}
           .configValue=${"prev_next_buttons"}
@@ -244,6 +242,10 @@ ${this._config.compare_button?.show === true ? html`
     </div>
   `;
 }
+
+// _localize(key, defaultText) {
+//   return this.hass?.localize?.(key) || defaultText;
+// }
 
 // handle period button changes
 _periodButtonChanged(ev) {
